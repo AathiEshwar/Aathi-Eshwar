@@ -797,14 +797,15 @@ window.addEventListener('load', () => {
   pLight2.position.set(-10, -8, 5);
   scene.add(pLight2);
 
-  // Main torus knot
+  // Main torus knot — positioned CENTER-LEFT so it doesn't overlap the profile photo
+  const TK_X = -3; // shift left away from profile photo area
   const tkGeo = new THREE.TorusKnotGeometry(5, 1.2, 180, 16, 2, 3);
   const tkMat = new THREE.MeshStandardMaterial({
     color: 0x001a33, metalness: 0.9, roughness: 0.15,
     emissive: 0x001040, wireframe: false
   });
   const torusKnot = new THREE.Mesh(tkGeo, tkMat);
-  torusKnot.position.set(8, 0, 0);
+  torusKnot.position.set(TK_X, 0, 0);
   scene.add(torusKnot);
 
   // Wireframe overlay on torus knot
@@ -835,7 +836,7 @@ window.addEventListener('load', () => {
     const angle = (i / 8) * Math.PI * 2;
     const r = 9 + Math.random() * 3;
     ico.position.set(
-      torusKnot.position.x + Math.cos(angle) * r,
+      TK_X + Math.cos(angle) * r,
       Math.sin(angle * 1.3) * 5,
       Math.sin(angle) * r * 0.5
     );
@@ -851,7 +852,7 @@ window.addEventListener('load', () => {
   for (let i = 0; i < hp; i++) {
     const angle = Math.random() * Math.PI * 2;
     const radius = 6 + Math.random() * 8;
-    hpPos[i*3] = torusKnot.position.x + Math.cos(angle) * radius;
+    hpPos[i*3] = TK_X + Math.cos(angle) * radius;
     hpPos[i*3+1] = (Math.random() - 0.5) * 14;
     hpPos[i*3+2] = Math.sin(angle) * radius * 0.6;
     const c = Math.random() < 0.6 ? [0, 0.96, 1] : [1, 0, 0.8];
@@ -886,7 +887,7 @@ window.addEventListener('load', () => {
 
     icoGroup.forEach(ico => {
       ico.userData.angle += ico.userData.speed;
-      ico.position.x = torusKnot.position.x + Math.cos(ico.userData.angle) * ico.userData.r;
+      ico.position.x = TK_X + Math.cos(ico.userData.angle) * ico.userData.r;
       ico.position.z = Math.sin(ico.userData.angle) * ico.userData.r * 0.5;
       ico.position.y = ico.userData.yOff + Math.sin(t * 2 + ico.userData.angle) * 1.5;
       ico.rotation.x += 0.02; ico.rotation.y += 0.015;
@@ -897,7 +898,7 @@ window.addEventListener('load', () => {
     // Mouse reactive camera tilt
     camera.position.x += (mouse.nx * 3 - camera.position.x) * 0.04;
     camera.position.y += (mouse.ny * 2 - camera.position.y) * 0.04;
-    camera.lookAt(8, 0, 0);
+    camera.lookAt(TK_X, 0, 0);
 
     // Light animation
     pLight1.position.x = Math.sin(t) * 12;
@@ -1184,6 +1185,147 @@ document.querySelectorAll('.project-card').forEach(card => {
   });
   card.addEventListener('mouseleave', () => { card.style.transform = ''; });
 });
+
+/* ============================================================
+   RIPPLE EFFECT on buttons
+============================================================ */
+document.querySelectorAll('.btn, .btn-send').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ripple = document.createElement('span');
+    ripple.style.cssText = `
+      position:absolute;left:${x}px;top:${y}px;
+      width:0;height:0;background:rgba(0,245,255,0.4);
+      border-radius:50%;transform:translate(-50%,-50%);
+      animation:rippleAnim 0.6s ease-out forwards;pointer-events:none;
+    `;
+    this.style.position = 'relative';
+    this.style.overflow = 'hidden';
+    this.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  });
+});
+
+/* ============================================================
+   MAGNETIC EFFECT on nav links
+============================================================ */
+document.querySelectorAll('.nav-links a').forEach(link => {
+  link.addEventListener('mousemove', function(e) {
+    const rect = this.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width / 2;
+    const cy = e.clientY - rect.top - rect.height / 2;
+    this.style.transform = `translate(${cx * 0.25}px, ${cy * 0.25}px)`;
+  });
+  link.addEventListener('mouseleave', function() {
+    this.style.transform = '';
+    this.style.transition = 'transform 0.3s ease';
+  });
+});
+
+/* ============================================================
+   MOBILE NAV TOGGLE
+============================================================ */
+const navbar = document.getElementById('navbar');
+const navLinks = navbar.querySelector('.nav-links');
+// Create hamburger
+const hamburger = document.createElement('button');
+hamburger.innerHTML = '<span></span><span></span><span></span>';
+hamburger.id = 'hamburger';
+hamburger.setAttribute('aria-label', 'Toggle menu');
+hamburger.style.cssText = `
+  display:none;flex-direction:column;gap:5px;background:none;
+  border:none;cursor:pointer;padding:4px;z-index:1001;
+`;
+hamburger.querySelectorAll || null;
+['span','span','span'].forEach((_, i) => {
+  const s = hamburger.querySelectorAll('span')[i];
+  if(s) { s.style.cssText = 'display:block;width:24px;height:2px;background:var(--cyan);transition:all 0.3s;'; }
+});
+navbar.appendChild(hamburger);
+
+hamburger.addEventListener('click', () => {
+  const open = navLinks.classList.toggle('nav-open');
+  hamburger.classList.toggle('open', open);
+  const spans = hamburger.querySelectorAll('span');
+  if (open) {
+    spans[0].style.transform = 'translateY(7px) rotate(45deg)';
+    spans[1].style.opacity = '0';
+    spans[2].style.transform = 'translateY(-7px) rotate(-45deg)';
+  } else {
+    spans.forEach(s => { s.style.transform = ''; s.style.opacity = '1'; });
+  }
+});
+
+// Close nav on link click (mobile)
+navLinks.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
+    navLinks.classList.remove('nav-open');
+    hamburger.classList.remove('open');
+    const spans = hamburger.querySelectorAll('span');
+    spans.forEach(s => { s.style.transform = ''; s.style.opacity = '1'; });
+  });
+});
+
+/* ============================================================
+   NAVBAR SCROLL SHRINK
+============================================================ */
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 80) {
+    navbar.style.padding = '0.7rem 3rem';
+    navbar.style.borderBottom = '1px solid rgba(0,245,255,0.2)';
+  } else {
+    navbar.style.padding = '1.2rem 3rem';
+    navbar.style.borderBottom = '1px solid var(--border)';
+  }
+});
+
+/* ============================================================
+   STAT CARD COUNTER ANIMATION
+============================================================ */
+const statCards = document.querySelectorAll('.stat-card');
+const statObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const numEl = e.target.querySelector('.stat-num');
+      const final = numEl.textContent.trim();
+      const num = parseInt(final);
+      if (!isNaN(num) && num > 0) {
+        let current = 0;
+        const step = Math.ceil(num / 30);
+        const timer = setInterval(() => {
+          current = Math.min(current + step, num);
+          numEl.textContent = current + (final.includes('+') ? '+' : '');
+          if (current >= num) clearInterval(timer);
+        }, 40);
+      }
+      statObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.5 });
+statCards.forEach(c => statObs.observe(c));
+
+/* ============================================================
+   RIPPLE KEYFRAME injection
+============================================================ */
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+@keyframes rippleAnim {
+  to { width: 200px; height: 200px; opacity: 0; }
+}
+@media(max-width:768px){
+  #hamburger { display:flex !important; }
+  .nav-links {
+    display:none;flex-direction:column;position:absolute;
+    top:100%;left:0;right:0;background:rgba(2,4,8,0.97);
+    backdrop-filter:blur(24px);padding:1.5rem 2rem;gap:1.5rem;
+    border-bottom:1px solid var(--border);
+  }
+  .nav-links.nav-open { display:flex; }
+}
+`;
+document.head.appendChild(styleEl);
 </script>
 </body>
 </html>
